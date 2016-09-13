@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html ng-app="app">
+<head>
+  <title>ngTodo</title>
+  <link rel="stylesheet" href="/stylesheets/style.css"> 
+  <link rel="stylesheet" href="/stylesheets/bootstrap.min.css"> 
+</head>
+<body>
+
+<ng-view></ng-view>
+
+<!-- Libraries -->
+<script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.2.25/angular.min.js"></script>
+<script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.2.25/angular-route.min.js"></script>
+<script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.2.25/angular-resource.min.js"></script>
+
+
+<!-- Template -->
+<script type="text/ng-template" id="/todos.html">
+
+<div class="container">
+	<h4>ToDo Application with Node</h4>
+</div>
+
+<div class="container">
+
+<div id= "todo-form" class="row">
+
+<div class="col-md-3 text-center">
+	<form id = "additem-form" ng-submit = "add()">
+		<div class="form-group">
+			<input type="text" ng-model="newTodo" placeholder="Enter Item todo">
+		</div>
+	</form>
+</div>
+
+<div class="col-md-3 text-center">
+  <input id="mark all" type="checkbox" ng-model="allChecked" ng-click="markall(allChecked)">
+  <label for="mark all">Mark all as completed</label>
+</div>
+
+<div class="col-md-3 text-center">
+  <input type="text" ng-model="search.name" placeholder="Search">
+</div>
+
+
+</div>
+
+<form role="form">
+	<div class="form-group">
+		<div id ="List_of_Items" class="jumbotron text-centre">
+        <input type="checkbox" ng-model="demo.completed">
+        <label>Completed</label>
+        <input type="checkbox" ng-model="demo.active">
+        <label>Active</label> 
+  			<ul>
+    			<li ng-repeat="todo in todos | filter: search |statusFilter:demo.completed:demo.active">
+
+      				<input type="checkbox" ng-model="todo.completed" ng-change="update($index)">
+      				<strong ng-show="!editing[$index]">{{todo.name}}</strong>
+	  				  <button class="btn-primary btn-xs" ng-show="!editing[$index]" ng-click="edit($index)">edit</button>
+
+      				<input ng-show="editing[$index]" type="text" ng-model="todo.name">
+      				<button class="btn-success btn-xs" ng-show="editing[$index]" ng-click="update($index)">Update</button>
+      				<button class="btn-warning btn-xs" ng-show="editing[$index]" ng-click="cancel($index)">Cancel</button>
+      				<button class="btn-danger btn-xs" ng-show="!editing[$index]" ng-click="remove($index)">x</button>
+   				</li>
+ 			 </ul>
+ 		</div>
+	</div>
+</form>
+
+</div>
+</script>
+
+
+<script>
+  angular.module('app', ['ngRoute', 'ngResource'])
+
+    //---------------
+    // Services
+    //---------------
+
+    .factory('Todos', ['$resource', function($resource){
+    	return $resource('/todos/:id', null, {
+    		'update': {method: 'PUT'}
+    	});
+    }])
+
+    //---------------
+    // Controller
+    //---------------
+
+    .controller('TodoController', ['$scope', 'Todos', function ($scope, Todos) {
+      $scope.editing = [];
+      $scope.todos = Todos.query();
+
+      $scope.add = function(){
+      	if(!$scope.newTodo || $scope.newTodo.length < 1) return;
+      	var todo = new Todos({name: $scope.newTodo, completed: false})
+
+      	todo.$save(function(){
+      		$scope.todos.push(todo);
+      		$scope.newTodo = '';
+      	});
+      }
+
+      $scope.update = function(index){
+      	var todo = $scope.todos[index];
+      	Todos.update({id: todo._id}, todo);
+      	$scope.editing[index] = false;
+      }
+
+      $scope.markall = function(allCompleted){
+		angular.forEach($scope.todos, function(todo){
+      		todo.completed = !allCompleted;
+      		Todos.update({id: todo._id}, todo);
+      		
+      	});
+      }
+
+     $scope.edit = function(index){
+    	$scope.editing[index] = angular.copy($scope.todos[index]);
+  	 }
+
+  	 $scope.cancel = function(index){
+    	$scope.todos[index] = angular.copy($scope.editing[index]);
+    	$scope.editing[index] = false;
+  	 }
+
+
+  	 $scope.remove = function(index){
+  		var todo = $scope.todos[index];
+
+  		Todos.remove({id: todo._id}, function(){
+    	$scope.todos.splice(index, 1);
+  		});
+	 }
+
+	
+	}])
+
+    //---------------
+    // Filter
+    //--------------- 
+    
+    .filter('statusFilter', [function(){
+      return function(data,completed,active){
+        var output = [];
+
+        if(!!completed){
+          for(var i =0; i<data.length; i++){
+            if(data[i].completed == true){
+              output.push(data[i]);
+            }
+          }
+        } else if (!!active){
+          for(var i =0; i<data.length; i++){
+            if(data[i].completed != true){
+              output.push(data[i]);
+            }
+          }
+        }else {
+          output = data;
+        }
+
+        return output;
+      }
+    }])
+   
+    //---------------
+    // Routes
+    //---------------
+
+    .config(['$routeProvider', function ($routeProvider) {
+      $routeProvider
+        .when('/', {
+          templateUrl: '/todos.html',
+          controller: 'TodoController'
+        })
+}]);
+   
+</script>
+
+</body>
+</html>
