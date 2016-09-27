@@ -144,7 +144,7 @@ describe('TodoController', function() {
     it('updates all items', function(){
       httpBackend.flush();
       var todo = scope.todos[index];
-      var allCompleted = false;
+      var allCompleted = true;
 
       scope.markall(allCompleted);
       expect(todo.completed).toBeTruthy();
